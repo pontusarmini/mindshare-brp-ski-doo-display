@@ -1,0 +1,114 @@
+html, body {
+  margin: 0;
+  padding: 0;
+}
+body {
+  width: 100%;
+}
+.banner {
+  position: relative;
+  margin: 0;
+  width: 980px;
+  height: 600px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-color: black;
+  cursor: pointer;
+}
+.sound {
+  background-position: center center;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-image: url(../assets/volume-off.svg);
+}
+.sound.on {
+  background-image: url(../assets/volume.svg);
+}
+.sound, .play {
+  width: 35px;
+  height: 35px;
+  position: absolute;
+  right: 18px;
+  top: 10px;
+  filter: drop-shadow(0 0 15px rgba(0,0,0,0.3));
+}
+
+.fallback, video {
+  position: absolute;
+  left: 0;
+  top: 0px;
+  width: 980px;
+  height: 600px;
+}
+
+.fallback {
+  background-position: center center;
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.logo {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: 240px;
+  transition: opacity .5s ease-out;
+  filter: drop-shadow(0 0 15px rgba(0,0,0,0.3));
+}
+
+.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+h3 {
+  font-family: sans-serif;
+  text-align: center;
+  width: 320px;
+  margin: 20px auto 30px auto;
+}
+.lesmer {
+  position: relative;
+  background-color: #ffc525;
+  width: 120px;
+  margin: 40px auto;
+  padding: 15px 0px;
+  height: auto;
+  transition: background-color .5s ease-out;
+  cursor: pointer;
+  filter: drop-shadow(0 0 15px rgba(0,0,0,0.3));
+  display: none;
+  img {
+    width: 72%;
+    display: block;
+    margin: 0% auto;
+  }
+  &:hover {
+    background-color: darken(#ffc525, 20%);
+  }
+}
+.banner.ended {
+  .logo {
+    width: 300px;
+    left: 50%;
+    transform: translateX(-50%);
+    top: 180px;
+  }
+  .lesmer {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    top: 360px;
+    display: block;
+  }
+}
+.banner.noautoplay {
+  .play {
+    width: 100px;
+    height: 100px;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate3d(-50%, -50%, 0);
+    filter: drop-shadow(0 0 15px rgba(0,0,0,0.3));
+  }
+}

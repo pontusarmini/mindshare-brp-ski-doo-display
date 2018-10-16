@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta http-equiv="cleartype" content="on">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <base href="<%= htmlWebpackPlugin.options.baseRef %>" target="_blank">
+  <title>StreamedBy</title>
+</head>
+
+<body>
+    <div class="banner">
+      <div class="fallback"></div>
+      <video id="video" poster="<%= require('./assets/9802/poster.jpg') %>" autoplay playsinline muted loop webkit-playsinline></video>
+        <div class="sound" id="sound"></div>
+        <img class="play hidden" src="<%= require('./assets/play-circle.svg') %>" width="120" alt="">
+        <img src="<%= require('./assets/feels.png') %>" class="logo" alt="" width="150">
+        <div class="lesmer">
+          <img src="<%= require('./assets/lesmer.png') %>" alt="">
+        </div>
+    </div>
+</body>
+
+</html>

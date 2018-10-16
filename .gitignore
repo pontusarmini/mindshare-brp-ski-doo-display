@@ -1,0 +1,11 @@
+/dist
+/node_modules
+src/assets/3201/
+src/assets/3202/
+src/assets/9801/
+src/assets/9802/
+/src/assets/originals/
+.DS_Store
+*.mp4
+*.ts
+*.m4s

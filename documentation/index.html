@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Home</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Home</h1>
+
+    
+
+
+
+    
+
+
+    <h3> </h3>
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+    <section>
+        <article><h1>StreamedBy Madington</h1><h2>Introduction</h2><p>StreamedBy is a product developed by Madington. It's a technique that makes playing HD video in display ads possible while keeping bandwidth and network load on a minimum.</p>
+<p>StreamedBy makes use of <a href="https://en.wikipedia.org/wiki/Dynamic_Adaptive_Streaming_over_HTTP">DASH</a> through the <a href="https://developer.mozilla.org/en-US/docs/Web/API/Media_Source_Extensions_API">Media Source Extensions Api</a>, falling back to <a href="https://developer.apple.com/streaming/">HLS</a> – HTTP Live Streaming – in browsers (eg iOS) that does not support it. When neither technology is available, StreamedBy can fallback to other animation technologies, such as GIFs or javascript/CSS.</p>
+<p>This repo is the <strong>central development hub</strong> for StreamedBy, collecting all relevant development resources in one place. It can also function as a <strong>boilerplate or template for new projects</strong>.</p>
+<h2>Prerequisites</h2><p>This is a list of software you will need to download and install:</p>
+<ul>
+<li><a href="https://www.ffmpeg.org/">FFMpeg</a></li>
+<li><a href="https://gpac.wp.imt.fr/mp4box/">MP4Box</a></li>
+</ul>
+<p>Nice to have:</p>
+<ul>
+<li>AWS Cli</li>
+<li><a href="https://www.lcdf.org/gifsicle/">Gifsicle</a></li>
+</ul>
+<p>FFMpeg, MP4Box and Gifsicle are all available through <a href="https://brew.sh/">HomeBrew</a> which is arguably the easiest way to download and install applications such as these. For instructions on downloading FFMpeg, using HomeBrew, with all available options <a href="https://gist.github.com/Piasy/b5dfd5c048eb69d1b91719988c0325d8">click here</a>.</p>
+<p>MP4Box can be downloaded with the formula:</p>
+<p><code>brew install mp4box</code></p>
+<p>Gifsicle:</p>
+<p><code>brew install gifsicle</code></p>
+<h2>Preparing the video</h2><p>Start by optimizing the video file for the web. This command is a good start:</p>
+<p><code>ffmpeg -i input.mp4 -c:v libx264 -s 640x500 -profile:v baseline -level 3.0 -preset slow -crf 23 -movflags faststart -c:a copy output.mp4</code></p>
+<p>The <code>-profile:v baseline -level 3.0</code> bit makes sure backwards compatibility is good (this specific setting will, for example, make the video work on all iOS devices, old as new). The <code>-crf</code> (Constant Rate Factor) option is where – together with the resolution (<code>-s</code>) – you can cut on file size. The higher the number, the smaller the file. But, of course, also lower quality video. Try to hit the sweet spot; keeping a good quality and not too big of a file. A value somewhere around 23 - 27 often produces ok results.</p>
+<p><code>-preset slow</code> makes the process slower but the quality better.</p>
+<p><code>-movflags faststart</code> will make the video load a little bit quicker.   </p>
+<h3>Removing sound</h3><p>If sound is not needed, the file size can be considerably reduced by removing the audio tracks form the file. This is done by adding the <code>-an</code> flag to the command:</p>
+<p><code>ffmpeg -i input.mp4 -c:v libx264 -s 640x500 -profile:v baseline -level 3.0 -preset slow -crf 23 -movflags faststart -c:a copy -an output.mp4</code></p>
+<h2>Chunking the video</h2><p>Download/clone or <code>npm install</code>/<code>yarn add</code> <a href="https://github.com/madington/Madington_StreamedBy-ify">StreamedBy:ify</a>. Follow the instructions.</p>
+<h2>Building the ad</h2><p>This is a quick guide to building a StreamedBy ad. Use this project as a template, or just copy the relevant files for use in your own build setup.</p>
+<p>Run <code>npm start</code> to run the example and have a look in <code>src/streamedbymadington.js</code>.</p>
+<h3>streamedby.js</h3><p>The foundation of StreamedBy is <code>modules/streamedby.js</code>. It exports a function, <code>StreamedBy</code>, that will set the streaming source of a video element to either DASH or HLS, pointing to the files we've created in the previous step. It returns a <code>Promise</code> and if it rejects, streaming is not possible. Probably because of an outdated or less common browser.</p>
+<p>Usage:</p>
+<pre class="prettyprint source"><code>import { StreamedBy } from './streamedby'
+const videoElem = document.querySelector('video')
+const baseUrl = 'https://delivered-by-madington.com/client/customer/campaign/ad/'
+
+StreamedBy(baseUrl, 'the_file_name_of_your_chosing_WITHOUT_FILE_EXTENSION', videoElem).then((success)=>{
+  // We can stream. Start the video or do something else
+  videoElem.play();
+}, (rejected)=>{
+  // Streaming not possible, fallback
+});</code></pre><h3>autoplay.js</h3><p><code>autoplay.js</code> exports a function, <code>checkIfAutoplayIsSupported</code>, that runs a test to see if muted autoplay is supported by the browser. To make it work, you will need to add this element to your html: <code>&lt;video id=&quot;ap-test&quot; playsinline muted webkit-playsinline width=&quot;1&quot; height=&quot;1&quot;&gt;&lt;/video&gt;</code> (this element will, by default, be removed after the test is run). The element <strong>needs to be in the DOM when the file loads</strong> or else the autoplay test <strong>will always fail in Chrome</strong>.</p>
+<pre class="prettyprint source"><code>checkIfAutoplayIsSupported().then(success=>{
+  // Autoplay is supported. Everything is cool and fine.
+},fail=>{
+  // Autoplay is not supported, fallback to some other thing
+});</code></pre><h2>playerutils.js</h2><p>The class <code>PlayerUtils</code> exposes a set of functions that can be handy. Use if you like.</p>
+<h4>Examples PlayerUtils</h4><p>Use <code>play()</code> &amp; <code>pause()</code> to avoid <code>The play() request was interrupted by a call to pause()</code> errors.</p>
+<pre class="prettyprint source"><code>const playerUtils = new PlayerUtils(refToVideoElem);
+playerUtils.play();
+playerUtils.pause();</code></pre><p><code>whenLoading.show.element</code> hides an element (with <code>opacity: 0</code> and <code>pointer-events: none</code>) and shows it again whenever the video is in <code>waiting</code> state:</p>
+<pre class="prettyprint source"><code>playerUtils.whenLoading.show.element(refToLoadingAnimation)</code></pre><h3>Polyfills needed</h3><p><code>StreamedBy</code> is built with <code>Promise</code>'s and <code>fetch</code>. Both of these will have to be polyfilled to support outdated browsers.</p>
+<h2>Documentation</h2><p>To build documentation, run <code>npm run build-jsdoc</code>.</p></article>
+    </section>
+
+
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="DashPlayer.html">DashPlayer</a></li><li><a href="PlayerUtils.html">PlayerUtils</a></li><li><a href="StreamedBy.html">StreamedBy</a></li></ul><h3>Global</h3><ul><li><a href="global.html#checkIfAutoplayIsSupported">checkIfAutoplayIsSupported</a></li><li><a href="global.html#StreamedByMessages">StreamedByMessages</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Thu Jun 21 2018 15:08:19 GMT+0200 (CEST)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: streamedby.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: streamedby.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+* @public
+* @enum Success and error messages for StreamedBy
+**/
+export const StreamedByMessages = {
+  HLS: 'HLS',
+  DASH: 'DASH',
+  NONE: 'NOT ABLE TO STREAM',
+  SOURCE_BUFFER_ERROR: 'addSourceBuffer error',
+  NO_MEDIA_SOURCE: 'Media Source Api not avilable',
+  FETCH_ERROR: 'Error fetching manifest',
+  MANIFEST_ERROR: 'Error parsing manifest'
+}
+/**
+* Sets the source of a video element to a DASH stream
+* @private
+* @class
+* @param {string} baseUrl - the url to the folder containing the manifest and chunk files
+* @param {string} manifestPath - the filename of the .mpd manifest
+* @param {HTMLVideoElement} videoElem - the video element that should play the stream
+* @returns {Promise.&lt;string>} a Promise that resolves with a success string or an Error.
+*/
+function DashPlayer(baseUrl, manifestPath, videoElem) {
+
+  let numberOfChunks,
+      initUrl,
+      mimeType,
+      codecs,
+      sourceBuffer,
+      ms,
+      segmentURLs,
+      index = 0;
+
+  const video = videoElem,
+        BASE_URL = baseUrl;
+
+  return new Promise((success, reject) =>{
+
+    if (!window.MediaSource) {
+      reject(new Error(StreamedByMessages.NO_MEDIA_SOURCE));
+    }
+
+    fetch(`${BASE_URL}${manifestPath}`)
+          .then(response => {
+            if (!response.ok) { throw new Error(StreamedByMessages.FETCH_ERROR) }
+            return response.text()
+          })
+          .then(str => (new window.DOMParser()).parseFromString(str, "text/xml"))
+          .then(parseManifest)
+          .then(init)
+          .catch(error=>{
+            reject(error)
+          });
+
+    function parseManifest(xml) {
+      try {
+        const rep = xml.querySelectorAll("Representation");
+        segmentURLs = rep[0].querySelectorAll('SegmentURL');
+        mimeType = rep[0].getAttribute("mimeType");
+        codecs = rep[0].getAttribute("codecs");
+        numberOfChunks = segmentURLs.length;
+        initUrl = xml.querySelector('Initialization').getAttribute('sourceURL');
+      } catch(e) {
+        throw new Error(StreamedByMessages.MANIFEST_ERROR);
+        return;
+      }
+      if(segmentURLs.length === 0 || !mimeType || !codecs || !initUrl) {
+        throw new Error(StreamedByMessages.MANIFEST_ERROR);
+      }
+    }
+
+    function init() {
+      ms = new MediaSource();
+      video.src = window.URL.createObjectURL(ms);
+      ms.addEventListener('sourceopen', onMediaSourceOpen);
+    }
+
+    function onMediaSourceOpen() {
+      try {
+        sourceBuffer = ms.addSourceBuffer(`${mimeType}; codecs=${codecs}`);
+      } catch(e) {
+        reject(new Error(StreamedByMessages.SOURCE_BUFFER_ERROR));
+        return;
+      }
+
+      sourceBuffer.addEventListener('updateend', nextSegment);
+
+      GET(`${BASE_URL}${initUrl}`, appendToBuffer, index);
+
+      success('Streaming');
+
+    }
+
+    function nextSegment(e) {
+      const outOfBounds = (index + 1) > numberOfChunks;
+      const url = !outOfBounds ? `${BASE_URL}${segmentURLs[index].getAttribute('media')}` : '';
+
+      if(video.paused) {
+        video.addEventListener('playing', nextSegment);
+        if(!outOfBounds){
+          sourceBuffer.removeEventListener('updateend', nextSegment);
+          GET(url, appendToBuffer, index);
+          index++;
+        }
+        return;
+      }
+      if(e.type === 'playing') {
+        sourceBuffer.addEventListener('updateend', nextSegment);
+      }
+      if(outOfBounds) {
+        sourceBuffer.removeEventListener('updateend', nextSegment);
+        return;
+      }
+      GET(url, appendToBuffer, index);
+      index++;
+    }
+
+    function appendToBuffer(videoChunk, idx) {
+      if (videoChunk) {
+        sourceBuffer.appendBuffer(new Uint8Array(videoChunk));
+      }
+      if((idx + 1) === numberOfChunks) {
+        sourceBuffer.addEventListener('updateend', (e)=> {
+          if (!ms.updating &amp;&amp; ms.readyState === 'open') {
+            ms.endOfStream();
+          }
+        });
+      }
+    }
+
+    function GET(url, callback, idx) {
+      fetch(url)
+        .then(response => response.arrayBuffer())
+        .then((buffer) => {
+          callback(buffer, idx);
+        });
+    }
+
+  });
+
+}
+/**
+* Sets the source of a video element to a stream. Fallbacks to HLS when DASH is not possible. Uses DashPlayer internally.
+* @public
+* @class
+* @param {string} baseUrl - the url to the folder containing the manifest and chunk files
+* @param {string} manifestPath - the filename of the .mpd/.m3u8 manifests without file extensions
+* @param {HTMLVideoElement} videoElem - the video element that should play the stream
+* @returns {Promise.&lt;string>} a Promise that resolves with a success message or rejects with an Error, see {@link StreamedByMessages}.
+*/
+export function StreamedBy(baseUrl, manifestPath, videoElem) {
+  return new Promise((ohYeah, ohNo)=>{
+    const dash = DashPlayer(baseUrl, `${manifestPath}.mpd?c=talkmoreeu`, videoElem);
+    dash.then(success=>{
+       ohYeah(StreamedByMessages.DASH)
+    }, reject=>{
+      if(videoElem.canPlayType('application/x-mpegURL') === 'maybe' || videoElem.canPlayType('application/x-mpegURL') === 'probably') {
+        videoElem.src = `${baseUrl}${manifestPath}.m3u8?c=talkmoreeu`;
+        ohYeah(StreamedByMessages.HLS);
+      } else {
+        ohNo(reject);
+      }
+    }).catch((err)=>{
+      console.log('err', err);
+    });
+  });
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="DashPlayer.html">DashPlayer</a></li><li><a href="PlayerUtils.html">PlayerUtils</a></li><li><a href="StreamedBy.html">StreamedBy</a></li></ul><h3>Global</h3><ul><li><a href="global.html#checkIfAutoplayIsSupported">checkIfAutoplayIsSupported</a></li><li><a href="global.html#StreamedByMessages">StreamedByMessages</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Thu Jun 21 2018 15:08:19 GMT+0200 (CEST)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
